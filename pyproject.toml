@@ -1,0 +1,11 @@
+[project]
+name = "copy-table"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "sqlalchemy>=2.0",
+    "pyodbc>=5.0",
+]
+
+[project.scripts]
+copy-table = "copy_table:main"
