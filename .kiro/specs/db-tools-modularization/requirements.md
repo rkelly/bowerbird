@@ -68,7 +68,8 @@ The project currently consists of two standalone Python scripts (`copy_table.py`
 1. THE copy-table Tool_Script SHALL import connection-string construction from Connection_Builder instead of defining its own `build_url` function.
 2. THE copy-table Tool_Script SHALL use CLI_Module to define its source/destination server arguments and schema argument.
 3. THE copy-table Tool_Script SHALL use Engine_Factory to create source and destination SQLAlchemy engines.
-4. WHEN invoked with the same arguments as before refactoring, THE copy-table Tool_Script SHALL produce identical behavior (same rows copied, same output messages, same error exits).
+4. WHEN the destination table does not exist, THE copy-table Tool_Script SHALL exit with an error message directing the user to deploy schema separately.
+5. THE copy-table Tool_Script SHALL NOT accept a `--create` flag or issue any DDL statements.
 
 ### Requirement 6: Refactor compare-rowcounts Tool
 
@@ -90,3 +91,13 @@ The project currently consists of two standalone Python scripts (`copy_table.py`
 1. THE DB_Tools_Package SHALL provide a validation function that compares source and destination Connection_Parameters and determines whether they refer to the same server and database (case-insensitive comparison).
 2. WHEN source and destination Connection_Parameters refer to the same server and database, THE validation function SHALL raise an error or return a failure indicator.
 3. THE copy-table Tool_Script SHALL invoke the shared validation function instead of implementing its own inline check.
+
+### Requirement 8: Data-Only Principle
+
+**User Story:** As a tool user, I want these tools to only operate on data and never modify database schema, so that schema management stays under the control of our declarative SQL Server Database Project.
+
+#### Acceptance Criteria
+
+1. NO Tool_Script SHALL issue DDL statements such as CREATE TABLE, DROP TABLE, or ALTER TABLE.
+2. WHEN a required table does not exist on the target server, THE Tool_Script SHALL exit with a clear error message indicating that schema must be deployed separately.
+3. THE DB_Tools_Package SHALL NOT provide any helper functions that create, drop, or alter database objects.
