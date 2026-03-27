@@ -12,13 +12,13 @@ def build_url(server, database, username=None, password=None, trusted=False):
         params += f";uid={username};pwd={password}"
     return f"mssql+pyodbc:///?odbc_connect={quote_plus(params)}"
 
-def copy_table(src_engine, dst_engine, table_name, schema="dbo"):
-    dst_insp = inspect(dst_engine)
-    if not dst_insp.has_table(table_name, schema=schema):
+def copy_table(engine1, engine2, table_name, schema="dbo"):
+    insp2 = inspect(engine2)
+    if not insp2.has_table(table_name, schema=schema):
         sys.exit(f"Error: {schema}.{table_name} does not exist on destination. Schema must be deployed separately.")
 
-    src_insp = inspect(src_engine)
-    available = src_insp.get_table_names(schema=schema)
+    insp1 = inspect(engine1)
+    available = insp1.get_table_names(schema=schema)
     if table_name not in available:
         # Try case-insensitive match
         match = next((t for t in available if t.lower() == table_name.lower()), None)
@@ -27,29 +27,29 @@ def copy_table(src_engine, dst_engine, table_name, schema="dbo"):
         else:
             sys.exit(f"Error: {schema}.{table_name} not found on source. Available tables in {schema}: {', '.join(available[:20])}")
 
-    src_meta = MetaData()
-    src_meta.reflect(bind=src_engine, schema=schema, only=[table_name])
-    src_table = src_meta.tables[f"{schema}.{table_name}"]
-    col_names = [c.name for c in src_table.columns]
+    meta1 = MetaData()
+    meta1.reflect(bind=engine1, schema=schema, only=[table_name])
+    table1 = meta1.tables[f"{schema}.{table_name}"]
+    col_names = [c.name for c in table1.columns]
     qualified = f"[{schema}].[{table_name}]"
     col_list = ", ".join(f"[{c}]" for c in col_names)
 
-    with src_engine.connect() as src_conn:
-        rows = src_conn.execute(text(f"SELECT {col_list} FROM {qualified}")).fetchall()
+    with engine1.connect() as conn1:
+        rows = conn1.execute(text(f"SELECT {col_list} FROM {qualified}")).fetchall()
 
     has_identity = any(c.autoincrement is True or (c.autoincrement == "auto" and c.primary_key)
-                       for c in src_table.columns if hasattr(c, 'autoincrement'))
+                       for c in table1.columns if hasattr(c, 'autoincrement'))
 
-    with dst_engine.begin() as dst_conn:
-        dst_conn.execute(text(f"DELETE FROM {qualified}"))
+    with engine2.begin() as conn2:
+        conn2.execute(text(f"DELETE FROM {qualified}"))
         if rows:
             if has_identity:
-                dst_conn.execute(text(f"SET IDENTITY_INSERT {qualified} ON"))
+                conn2.execute(text(f"SET IDENTITY_INSERT {qualified} ON"))
             placeholders = ", ".join(f":{c}" for c in col_names)
             insert = f"INSERT INTO {qualified} ({col_list}) VALUES ({placeholders})"
-            dst_conn.execute(text(insert), [dict(zip(col_names, row)) for row in rows])
+            conn2.execute(text(insert), [dict(zip(col_names, row)) for row in rows])
             if has_identity:
-                dst_conn.execute(text(f"SET IDENTITY_INSERT {qualified} OFF"))
+                conn2.execute(text(f"SET IDENTITY_INSERT {qualified} OFF"))
 
     print(f"Copied {len(rows)} rows to {qualified}")
 
@@ -71,10 +71,10 @@ def main():
     if args.server1.lower() == args.server2.lower() and args.database1.lower() == args.database2.lower():
         sys.exit("Error: source and destination are the same server/database. Aborting to protect data.")
 
-    src_engine = create_engine(build_url(args.server1, args.database1, args.user1, args.password1, args.trusted))
-    dst_engine = create_engine(build_url(args.server2, args.database2, args.user2, args.password2, args.trusted))
+    engine1 = create_engine(build_url(args.server1, args.database1, args.user1, args.password1, args.trusted))
+    engine2 = create_engine(build_url(args.server2, args.database2, args.user2, args.password2, args.trusted))
 
-    copy_table(src_engine, dst_engine, args.table, args.schema)
+    copy_table(engine1, engine2, args.table, args.schema)
 
 if __name__ == "__main__":
     main()
