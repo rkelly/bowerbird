@@ -12,12 +12,20 @@ def build_url(server, database, username=None, password=None, trusted=False):
         params += f";uid={username};pwd={password}"
     return f"mssql+pyodbc:///?odbc_connect={quote_plus(params)}"
 
-def copy_table(src_engine, dst_engine, table_name, schema="dbo", create=False):
+def copy_table(src_engine, dst_engine, table_name, schema="dbo"):
     dst_insp = inspect(dst_engine)
-    dst_exists = dst_insp.has_table(table_name, schema=schema)
+    if not dst_insp.has_table(table_name, schema=schema):
+        sys.exit(f"Error: {schema}.{table_name} does not exist on destination. Schema must be deployed separately.")
 
-    if not dst_exists and not create:
-        sys.exit(f"Error: {schema}.{table_name} does not exist on destination. Pass --create to auto-create it.")
+    src_insp = inspect(src_engine)
+    available = src_insp.get_table_names(schema=schema)
+    if table_name not in available:
+        # Try case-insensitive match
+        match = next((t for t in available if t.lower() == table_name.lower()), None)
+        if match:
+            sys.exit(f"Error: {schema}.{table_name} not found on source. Did you mean '{match}'?")
+        else:
+            sys.exit(f"Error: {schema}.{table_name} not found on source. Available tables in {schema}: {', '.join(available[:20])}")
 
     src_meta = MetaData()
     src_meta.reflect(bind=src_engine, schema=schema, only=[table_name])
@@ -25,10 +33,6 @@ def copy_table(src_engine, dst_engine, table_name, schema="dbo", create=False):
     col_names = [c.name for c in src_table.columns]
     qualified = f"[{schema}].[{table_name}]"
     col_list = ", ".join(f"[{c}]" for c in col_names)
-
-    if not dst_exists:
-        src_table.create(bind=dst_engine)
-        print(f"Created {qualified} on destination")
 
     with src_engine.connect() as src_conn:
         rows = src_conn.execute(text(f"SELECT {col_list} FROM {qualified}")).fetchall()
@@ -62,7 +66,6 @@ def main():
     p.add_argument("--dst-user")
     p.add_argument("--dst-pass")
     p.add_argument("--trusted", action="store_true")
-    p.add_argument("--create", action="store_true")
     args = p.parse_args()
 
     if args.src_server.lower() == args.dst_server.lower() and args.src_db.lower() == args.dst_db.lower():
@@ -71,7 +74,7 @@ def main():
     src_engine = create_engine(build_url(args.src_server, args.src_db, args.src_user, args.src_pass, args.trusted))
     dst_engine = create_engine(build_url(args.dst_server, args.dst_db, args.dst_user, args.dst_pass, args.trusted))
 
-    copy_table(src_engine, dst_engine, args.table, args.schema, args.create)
+    copy_table(src_engine, dst_engine, args.table, args.schema)
 
 if __name__ == "__main__":
     main()
