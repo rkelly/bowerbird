@@ -1,6 +1,7 @@
 [project]
-name = "copy-table"
+name = "bowerbird"
 version = "0.1.0"
+description = "A suite of data-only tools for SQL Server"
 requires-python = ">=3.10"
 dependencies = [
     "sqlalchemy>=2.0",
@@ -9,3 +10,4 @@ dependencies = [
 
 [project.scripts]
 copy-table = "copy_table:main"
+compare-rowcounts = "compare_rowcounts:main"
