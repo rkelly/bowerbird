@@ -9,7 +9,7 @@ A suite of data-only tools for SQL Server. These tools operate strictly on data 
 Copies all rows from a table on one server to the same table on another server. Handles identity columns automatically.
 
 ```
-uv run copy-table --trusted --src-server SRV1 --src-db MyDB --dst-server SRV2 --dst-db MyDB --schema dbo --table my_table
+uv run copy-table --trusted --server1 SRV1 --database1 MyDB --server2 SRV2 --database2 MyDB --schema dbo --table my_table
 ```
 
 ### compare-rowcounts
@@ -25,7 +25,8 @@ uv run compare-rowcounts --trusted --server1 SRV1 --server2 SRV2 --database MyDB
 All tools support two authentication modes:
 
 - `--trusted` — Windows Integrated Authentication
-- `--user` / `--password` — SQL Server authentication
+- `--user` / `--password` — SQL Server authentication (compare-rowcounts, shared credentials)
+- `--user1` / `--password1` and `--user2` / `--password2` — SQL Server authentication (copy-table, per-server credentials)
 
 ## Requirements
 
