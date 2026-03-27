@@ -33,12 +33,19 @@ def copy_table(src_engine, dst_engine, table_name, schema="dbo", create=False):
     with src_engine.connect() as src_conn:
         rows = src_conn.execute(text(f"SELECT {col_list} FROM {qualified}")).fetchall()
 
+    has_identity = any(c.autoincrement is True or (c.autoincrement == "auto" and c.primary_key)
+                       for c in src_table.columns if hasattr(c, 'autoincrement'))
+
     with dst_engine.begin() as dst_conn:
         dst_conn.execute(text(f"DELETE FROM {qualified}"))
         if rows:
+            if has_identity:
+                dst_conn.execute(text(f"SET IDENTITY_INSERT {qualified} ON"))
             placeholders = ", ".join(f":{c}" for c in col_names)
             insert = f"INSERT INTO {qualified} ({col_list}) VALUES ({placeholders})"
             dst_conn.execute(text(insert), [dict(zip(col_names, row)) for row in rows])
+            if has_identity:
+                dst_conn.execute(text(f"SET IDENTITY_INSERT {qualified} OFF"))
 
     print(f"Copied {len(rows)} rows to {qualified}")
 
