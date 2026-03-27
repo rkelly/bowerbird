@@ -33,11 +33,11 @@ def main():
     p.add_argument("--trusted", action="store_true")
     args = p.parse_args()
 
-    eng1 = create_engine(build_url(args.server1, args.database, args.user, args.password, args.trusted))
-    eng2 = create_engine(build_url(args.server2, args.database, args.user, args.password, args.trusted))
+    engine1 = create_engine(build_url(args.server1, args.database, args.user, args.password, args.trusted))
+    engine2 = create_engine(build_url(args.server2, args.database, args.user, args.password, args.trusted))
 
-    counts1 = get_rowcounts(eng1, args.schema)
-    counts2 = get_rowcounts(eng2, args.schema)
+    counts1 = get_rowcounts(engine1, args.schema)
+    counts2 = get_rowcounts(engine2, args.schema)
 
     all_tables = sorted(set(counts1) | set(counts2))
     if not all_tables:
