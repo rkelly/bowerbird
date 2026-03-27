@@ -55,24 +55,24 @@ def copy_table(src_engine, dst_engine, table_name, schema="dbo"):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--src-server", required=True)
-    p.add_argument("--src-db", required=True)
-    p.add_argument("--dst-server", required=True)
-    p.add_argument("--dst-db", required=True)
+    p.add_argument("--server1", required=True)
+    p.add_argument("--database1", required=True)
+    p.add_argument("--server2", required=True)
+    p.add_argument("--database2", required=True)
     p.add_argument("--table", required=True)
     p.add_argument("--schema", default="dbo")
-    p.add_argument("--src-user")
-    p.add_argument("--src-pass")
-    p.add_argument("--dst-user")
-    p.add_argument("--dst-pass")
+    p.add_argument("--user1")
+    p.add_argument("--password1")
+    p.add_argument("--user2")
+    p.add_argument("--password2")
     p.add_argument("--trusted", action="store_true")
     args = p.parse_args()
 
-    if args.src_server.lower() == args.dst_server.lower() and args.src_db.lower() == args.dst_db.lower():
+    if args.server1.lower() == args.server2.lower() and args.database1.lower() == args.database2.lower():
         sys.exit("Error: source and destination are the same server/database. Aborting to protect data.")
 
-    src_engine = create_engine(build_url(args.src_server, args.src_db, args.src_user, args.src_pass, args.trusted))
-    dst_engine = create_engine(build_url(args.dst_server, args.dst_db, args.dst_user, args.dst_pass, args.trusted))
+    src_engine = create_engine(build_url(args.server1, args.database1, args.user1, args.password1, args.trusted))
+    dst_engine = create_engine(build_url(args.server2, args.database2, args.user2, args.password2, args.trusted))
 
     copy_table(src_engine, dst_engine, args.table, args.schema)
 
